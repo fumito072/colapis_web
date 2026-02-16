@@ -1,0 +1,365 @@
+/* ============================================
+   COLAPIS Design System
+   ============================================ */
+
+:root {
+  /* Colors — Dark mystical palette */
+  --color-bg: #060d0b;
+  --color-bg-deep: #030806;
+  --color-surface: #0a1613;
+  --color-surface-light: #132a24;
+  --color-accent: #2dd4a8;
+  --color-accent-dim: #1a8a6e;
+  --color-glow: #4aedc4;
+  --color-glow-white: #b8fff0;
+  --color-mist: rgba(45, 212, 168, 0.06);
+  --color-text: #e8f5f0;
+  --color-text-dim: #7a9e93;
+  --color-text-muted: #4a6e63;
+
+  /* Typography */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-size-title: clamp(2rem, 5vw, 4rem);
+  --font-size-subtitle: clamp(0.75rem, 1.5vw, 1rem);
+  --font-size-label: clamp(0.65rem, 1vw, 0.85rem);
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 2rem;
+  --space-xl: 4rem;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 300ms ease;
+  --transition-slow: 600ms ease;
+  --transition-glacial: 1200ms ease;
+}
+
+/* ============================================
+   Reset & Base
+   ============================================ */
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-bg);
+  font-family: var(--font-family);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  cursor: default;
+  user-select: none;
+}
+
+/* ============================================
+   Canvas
+   ============================================ */
+
+#main-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* ============================================
+   Title Overlay
+   ============================================ */
+
+#title-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity var(--transition-glacial);
+}
+
+#title-overlay.hidden {
+  opacity: 0;
+}
+
+#site-title {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-light);
+  letter-spacing: 0.4em;
+  color: var(--color-text);
+  text-shadow:
+    0 0 40px rgba(45, 212, 168, 0.15),
+    0 0 80px rgba(45, 212, 168, 0.05);
+  transform: translateY(-20%);
+  animation: titleFadeIn 2s ease-out forwards;
+}
+
+@keyframes titleFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10%);
+    letter-spacing: 0.8em;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-20%);
+    letter-spacing: 0.4em;
+  }
+}
+
+/* ============================================
+   Stone Labels
+   ============================================ */
+
+#stone-labels {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 15;
+  pointer-events: none;
+}
+
+.stone-label {
+  position: absolute;
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.15em;
+  color: var(--color-text-dim);
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity var(--transition-normal),
+    transform var(--transition-normal),
+    color var(--transition-normal);
+  white-space: nowrap;
+}
+
+.stone-label.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.stone-label.active {
+  color: var(--color-glow);
+  text-shadow: 0 0 20px rgba(45, 212, 168, 0.3);
+}
+
+/* ============================================
+   Camera Container
+   ============================================ */
+
+#camera-container {
+  position: fixed;
+  bottom: var(--space-lg);
+  left: var(--space-lg);
+  width: 180px;
+  height: 135px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--color-surface-light);
+  z-index: 50;
+  transition: opacity var(--transition-normal), transform var(--transition-normal);
+  background: var(--color-bg-deep);
+}
+
+#camera-container.hidden {
+  opacity: 0;
+  transform: scale(0.9) translateY(10px);
+  pointer-events: none;
+}
+
+#camera-feed {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+#camera-toggle {
+  position: absolute;
+  top: var(--space-xs);
+  right: var(--space-xs);
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--color-text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast);
+}
+
+#camera-toggle:hover {
+  background: rgba(0, 0, 0, 0.8);
+  color: var(--color-text);
+}
+
+/* ============================================
+   Hand Tracking Button
+   ============================================ */
+
+#hand-tracking-btn {
+  position: fixed;
+  bottom: var(--space-lg);
+  right: var(--space-lg);
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--color-surface-light);
+  border-radius: 50%;
+  background: rgba(10, 22, 19, 0.8);
+  color: var(--color-text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  transition:
+    border-color var(--transition-normal),
+    color var(--transition-normal),
+    box-shadow var(--transition-normal),
+    background var(--transition-normal);
+  backdrop-filter: blur(10px);
+}
+
+#hand-tracking-btn:hover {
+  border-color: var(--color-accent-dim);
+  color: var(--color-accent);
+  box-shadow: 0 0 20px rgba(45, 212, 168, 0.1);
+}
+
+#hand-tracking-btn.active {
+  border-color: var(--color-accent);
+  color: var(--color-glow);
+  background: rgba(45, 212, 168, 0.1);
+  box-shadow: 0 0 30px rgba(45, 212, 168, 0.15);
+}
+
+/* ============================================
+   Page Container
+   ============================================ */
+
+#page-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100;
+  background: var(--color-bg);
+  overflow-y: auto;
+  transition: opacity var(--transition-slow);
+}
+
+#page-container.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#page-container.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* Page inner content */
+.page-content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-title {
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  font-weight: var(--font-weight-light);
+  letter-spacing: 0.2em;
+  color: var(--color-text);
+  margin-bottom: var(--space-lg);
+  text-align: center;
+}
+
+.page-subtitle {
+  font-size: var(--font-size-subtitle);
+  color: var(--color-text-muted);
+  letter-spacing: 0.1em;
+  text-align: center;
+  line-height: 1.8;
+  margin-bottom: var(--space-xl);
+}
+
+/* Back button */
+.back-btn {
+  position: fixed;
+  top: var(--space-lg);
+  left: var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: none;
+  border: 1px solid var(--color-surface-light);
+  border-radius: 8px;
+  padding: var(--space-sm) var(--space-md);
+  color: var(--color-text-dim);
+  font-family: var(--font-family);
+  font-size: var(--font-size-label);
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  z-index: 110;
+  transition:
+    border-color var(--transition-normal),
+    color var(--transition-normal);
+}
+
+.back-btn:hover {
+  border-color: var(--color-accent-dim);
+  color: var(--color-accent);
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
+
+@media (max-width: 768px) {
+  #camera-container {
+    width: 120px;
+    height: 90px;
+    bottom: var(--space-md);
+    left: var(--space-md);
+  }
+
+  #hand-tracking-btn {
+    bottom: var(--space-md);
+    right: var(--space-md);
+    width: 40px;
+    height: 40px;
+  }
+}

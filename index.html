@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="COLAPIS - 3Dテクノロジーで未来を創造する。医療とITの融合で社会課題を解決。" />
+  <title>COLAPIS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <!-- Main Canvas -->
+  <canvas id="main-canvas"></canvas>
+
+  <!-- Title Overlay -->
+  <div id="title-overlay">
+    <h1 id="site-title">COLAPIS</h1>
+  </div>
+
+  <!-- Stone Labels (floating) -->
+  <div id="stone-labels"></div>
+
+  <!-- Camera preview for hand tracking -->
+  <div id="camera-container" class="hidden">
+    <video id="camera-feed" playsinline></video>
+    <button id="camera-toggle" aria-label="Toggle camera preview">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Hand tracking activation button -->
+  <button id="hand-tracking-btn" aria-label="Enable hand tracking">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M18 11V6a2 2 0 0 0-4 0v1M14 7V4a2 2 0 0 0-4 0v6M10 5.5V3a2 2 0 0 0-4 0v9"/>
+      <path d="M18 11a2 2 0 0 1 4 0v3a8 8 0 0 1-8 8h-2c-2.5 0-4.5-1-6.2-2.8L3 16"/>
+    </svg>
+  </button>
+
+  <!-- Page container for sub-pages -->
+  <div id="page-container" class="hidden"></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
