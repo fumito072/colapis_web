@@ -52,7 +52,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -111,19 +112,59 @@ html, body {
     0 0 40px rgba(45, 212, 168, 0.15),
     0 0 80px rgba(45, 212, 168, 0.05);
   transform: translateY(-20%);
-  animation: titleFadeIn 2s ease-out forwards;
+  animation:
+    titleFadeIn 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards,
+    titleBreath 6s ease-in-out 3s infinite,
+    titleFloat 8s ease-in-out 2.5s infinite;
 }
 
 @keyframes titleFadeIn {
   from {
     opacity: 0;
     transform: translateY(-10%);
-    letter-spacing: 0.8em;
+    letter-spacing: 1em;
+    filter: blur(4px);
   }
+
+  60% {
+    opacity: 0.8;
+    filter: blur(1px);
+  }
+
   to {
     opacity: 1;
     transform: translateY(-20%);
     letter-spacing: 0.4em;
+    filter: blur(0);
+  }
+}
+
+@keyframes titleBreath {
+
+  0%,
+  100% {
+    text-shadow:
+      0 0 40px rgba(45, 212, 168, 0.12),
+      0 0 80px rgba(45, 212, 168, 0.04);
+  }
+
+  50% {
+    text-shadow:
+      0 0 60px rgba(45, 212, 168, 0.25),
+      0 0 120px rgba(45, 212, 168, 0.08),
+      0 0 200px rgba(45, 212, 168, 0.03);
+  }
+}
+
+@keyframes titleFloat {
+
+  0%,
+  100% {
+    transform: translateY(-20%);
+  }
+
+  50% {
+    transform: translateY(-22%);
   }
 }
 
@@ -296,6 +337,21 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  animation: pageContentEnter 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes pageContentEnter {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+    filter: blur(3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
 }
 
 .page-title {
@@ -305,6 +361,19 @@ html, body {
   color: var(--color-text);
   margin-bottom: var(--space-lg);
   text-align: center;
+  animation: pageTitleEnter 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s both;
+}
+
+@keyframes pageTitleEnter {
+  from {
+    opacity: 0;
+    letter-spacing: 0.5em;
+  }
+
+  to {
+    opacity: 1;
+    letter-spacing: 0.2em;
+  }
 }
 
 .page-subtitle {
@@ -314,6 +383,16 @@ html, body {
   text-align: center;
   line-height: 1.8;
   margin-bottom: var(--space-xl);
+  animation: pageContentEnter 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.4s both;
+}
+
+.page-body {
+  font-size: var(--font-size-subtitle);
+  color: var(--color-text-dim);
+  line-height: 2;
+  text-align: center;
+  letter-spacing: 0.05em;
+  animation: pageContentEnter 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.6s both;
 }
 
 /* Back button */

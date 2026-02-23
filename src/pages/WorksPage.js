@@ -3,9 +3,9 @@
  * Minimal placeholder, designed for easy content expansion
  */
 export function createWorksPage() {
-    const container = document.createElement('div');
-    container.className = 'page-content';
-    container.innerHTML = `
+  const container = document.createElement('div');
+  container.className = 'page-content';
+  container.innerHTML = `
     <h2 class="page-title">開発事例</h2>
     <p class="page-subtitle">
       Explore Our Works
@@ -17,5 +17,5 @@ export function createWorksPage() {
       </p>
     </div>
   `;
-    return container;
+  return container;
 }

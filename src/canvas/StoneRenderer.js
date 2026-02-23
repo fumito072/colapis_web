@@ -1,6 +1,6 @@
 /**
  * StoneRenderer — Draws 3 mystical stones on Canvas 2D
- * Each stone is an organic shape with glow effects
+ * Each stone is an organic shape with glow, energy cracks, and connection lines
  */
 export class StoneRenderer {
     constructor() {
@@ -10,6 +10,9 @@ export class StoneRenderer {
         this.draggedStone = null;
         this.dragOffset = { x: 0, y: 0 };
         this.initialized = false;
+
+        // Energy connection state
+        this.energyFlowPhase = 0;
     }
 
     /**
@@ -41,6 +44,9 @@ export class StoneRenderer {
                 glowIntensity: 0,
                 hoverProgress: 0,
                 pulsePhase: 0,
+                breathPhase: 0,
+                driftPhaseX: Math.random() * Math.PI * 2,
+                driftPhaseY: Math.random() * Math.PI * 2,
                 color: { h: 165, s: 35, l: 28 },
             },
             {
@@ -57,6 +63,9 @@ export class StoneRenderer {
                 glowIntensity: 0,
                 hoverProgress: 0,
                 pulsePhase: Math.PI * 0.66,
+                breathPhase: Math.PI * 0.5,
+                driftPhaseX: Math.random() * Math.PI * 2,
+                driftPhaseY: Math.random() * Math.PI * 2,
                 color: { h: 170, s: 30, l: 25 },
             },
             {
@@ -73,6 +82,9 @@ export class StoneRenderer {
                 glowIntensity: 0,
                 hoverProgress: 0,
                 pulsePhase: Math.PI * 1.33,
+                breathPhase: Math.PI * 1.2,
+                driftPhaseX: Math.random() * Math.PI * 2,
+                driftPhaseY: Math.random() * Math.PI * 2,
                 color: { h: 160, s: 40, l: 26 },
             },
         ];
@@ -102,30 +114,107 @@ export class StoneRenderer {
      * @param {number} dt — delta time
      */
     update(time, dt) {
+        this.energyFlowPhase += dt * 0.6;
+
         for (const stone of this.stones) {
-            // Pulse animation
+            // Pulse animation — multi-frequency for organic feel
             stone.pulsePhase += dt * 0.8;
+            stone.breathPhase += dt * 0.4;
             const pulse = Math.sin(stone.pulsePhase) * 0.5 + 0.5;
-            stone.glowIntensity = 0.3 + pulse * 0.3;
+            const breath = Math.sin(stone.breathPhase) * 0.3 + 0.7;
+            stone.glowIntensity = (0.3 + pulse * 0.3) * breath;
 
             // Hover animation
             const isHovered = this.hoveredStone === stone;
             const targetHover = isHovered ? 1 : 0;
             stone.hoverProgress += (targetHover - stone.hoverProgress) * dt * 5;
 
-            // Gentle floating
-            stone.y = stone.baseY + Math.sin(time * 0.5 + stone.pulsePhase) * 3;
-            stone.rotation += dt * 0.02 * (isHovered ? 3 : 1);
+            // Multi-axis floating with Lissajous-like drift
+            if (!this.draggedStone || this.draggedStone !== stone) {
+                const driftX = Math.sin(time * 0.3 + stone.driftPhaseX) * 4
+                    + Math.sin(time * 0.7 + stone.driftPhaseX * 2) * 2;
+                const driftY = Math.sin(time * 0.5 + stone.driftPhaseY) * 5
+                    + Math.cos(time * 0.2 + stone.driftPhaseY * 1.5) * 3;
+                stone.x = stone.baseX + driftX;
+                stone.y = stone.baseY + driftY;
+            }
+
+            // Slow gentle rotation
+            stone.rotation += dt * 0.015 * (isHovered ? 4 : 1);
         }
     }
 
     /**
-     * Draw all stones
+     * Draw all stones and connections
      * @param {CanvasRenderingContext2D} ctx
      */
     draw(ctx) {
+        // Draw energy connection lines first (behind stones)
+        this._drawConnections(ctx);
+
         for (const stone of this.stones) {
             this._drawStone(ctx, stone);
+        }
+    }
+
+    /**
+     * Draw energy lines connecting the 3 stones
+     * @param {CanvasRenderingContext2D} ctx
+     */
+    _drawConnections(ctx) {
+        if (this.stones.length < 3) return;
+
+        const pairs = [
+            [this.stones[0], this.stones[1]],
+            [this.stones[1], this.stones[2]],
+            [this.stones[2], this.stones[0]],
+        ];
+
+        for (let pi = 0; pi < pairs.length; pi++) {
+            const [a, b] = pairs[pi];
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            // Base alpha — faint connection, stronger if either stone is hovered
+            const hoverBoost = Math.max(a.hoverProgress, b.hoverProgress);
+            const baseAlpha = 0.03 + hoverBoost * 0.12;
+
+            // Draw flowing energy dots along the line
+            const numDots = 12;
+            for (let i = 0; i < numDots; i++) {
+                // Each dot flows along the line
+                const flowOffset = (this.energyFlowPhase + pi * 0.3 + i * 0.05) % 1;
+                const t = (i / numDots + flowOffset * 0.15) % 1;
+
+                // Bezier curve with midpoint offset for organic path
+                const midX = (a.x + b.x) / 2 + Math.sin(this.energyFlowPhase * 0.8 + pi * 2) * 15;
+                const midY = (a.y + b.y) / 2 + Math.cos(this.energyFlowPhase * 0.6 + pi * 2) * 15;
+
+                const x = (1 - t) * (1 - t) * a.x + 2 * (1 - t) * t * midX + t * t * b.x;
+                const y = (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * midY + t * t * b.y;
+
+                // Dot fades near endpoints
+                const edgeFade = Math.min(t, 1 - t) * 4;
+                const dotAlpha = baseAlpha * Math.min(edgeFade, 1) * (0.5 + Math.sin(this.energyFlowPhase * 3 + i) * 0.5);
+
+                const dotSize = 1.5 + hoverBoost * 1.5 + Math.sin(this.energyFlowPhase * 2 + i * 0.5) * 0.5;
+
+                ctx.beginPath();
+                ctx.arc(x, y, dotSize, 0, Math.PI * 2);
+                ctx.fillStyle = `hsla(170, 70%, 65%, ${dotAlpha})`;
+                ctx.fill();
+            }
+
+            // Faint connecting line
+            ctx.beginPath();
+            const midX = (a.x + b.x) / 2 + Math.sin(this.energyFlowPhase * 0.8 + pi * 2) * 15;
+            const midY = (a.y + b.y) / 2 + Math.cos(this.energyFlowPhase * 0.6 + pi * 2) * 15;
+            ctx.moveTo(a.x, a.y);
+            ctx.quadraticCurveTo(midX, midY, b.x, b.y);
+            ctx.strokeStyle = `hsla(170, 60%, 50%, ${baseAlpha * 0.3})`;
+            ctx.lineWidth = 0.5 + hoverBoost * 0.5;
+            ctx.stroke();
         }
     }
 
@@ -139,7 +228,9 @@ export class StoneRenderer {
         ctx.translate(stone.x, stone.y);
         ctx.rotate(stone.rotation);
 
-        const scale = 1 + stone.hoverProgress * 0.08;
+        // Breathing scale
+        const breathScale = 1 + Math.sin(stone.breathPhase) * 0.015;
+        const scale = (1 + stone.hoverProgress * 0.08) * breathScale;
         ctx.scale(scale, scale);
 
         // Outer glow
@@ -155,24 +246,7 @@ export class StoneRenderer {
         ctx.fill();
 
         // Stone body path
-        ctx.beginPath();
-        for (let i = 0; i < stone.shape.length; i++) {
-            const p = stone.shape[i];
-            const next = stone.shape[(i + 1) % stone.shape.length];
-            if (i === 0) {
-                ctx.moveTo(Math.cos(p.angle) * p.r, Math.sin(p.angle) * p.r);
-            }
-            // Smooth curve through points
-            const cpX = (Math.cos(p.angle) * p.r + Math.cos(next.angle) * next.r) / 2;
-            const cpY = (Math.sin(p.angle) * p.r + Math.sin(next.angle) * next.r) / 2;
-            ctx.quadraticCurveTo(
-                Math.cos(next.angle) * next.r,
-                Math.sin(next.angle) * next.r,
-                cpX,
-                cpY
-            );
-        }
-        ctx.closePath();
+        const bodyPath = this._createStonePath(ctx, stone);
 
         // Stone fill gradient
         const fillGrad = ctx.createRadialGradient(
@@ -185,22 +259,75 @@ export class StoneRenderer {
         ctx.fillStyle = fillGrad;
         ctx.fill();
 
-        // Surface texture — subtle noise lines
-        ctx.strokeStyle = `hsla(${stone.color.h}, 20%, ${stone.color.l + 5}%, 0.15)`;
+        // Surface texture — subtle noise lines (seeded by stone id for consistency)
+        ctx.strokeStyle = `hsla(${stone.color.h}, 20%, ${stone.color.l + 5}%, 0.12)`;
         ctx.lineWidth = 0.5;
-        for (let i = 0; i < 5; i++) {
+        const seed = stone.id === 'company' ? 1 : stone.id === 'services' ? 2 : 3;
+        for (let i = 0; i < 6; i++) {
             ctx.beginPath();
-            const startAngle = Math.random() * Math.PI * 2;
-            const arcLen = Math.PI * (0.3 + Math.random() * 0.5);
-            const r = stone.size * (0.3 + Math.random() * 0.4);
+            const startAngle = ((seed * 7 + i * 13) % 100) / 100 * Math.PI * 2;
+            const arcLen = Math.PI * (0.2 + ((seed * 3 + i * 7) % 50) / 100);
+            const r = stone.size * (0.25 + ((seed * 11 + i * 17) % 60) / 100);
             ctx.arc(0, 0, r, startAngle, startAngle + arcLen);
             ctx.stroke();
         }
 
         // Edge light — bright rim
-        const edgeAlpha = 0.15 + stone.hoverProgress * 0.2;
+        const edgeAlpha = 0.12 + stone.hoverProgress * 0.25;
         ctx.strokeStyle = `hsla(${stone.color.h}, 80%, 75%, ${edgeAlpha})`;
-        ctx.lineWidth = 1 + stone.hoverProgress;
+        ctx.lineWidth = 0.8 + stone.hoverProgress * 1.2;
+        this._createStonePath(ctx, stone);
+        ctx.stroke();
+
+        // Inner glow on hover — radiant core
+        if (stone.hoverProgress > 0.05) {
+            const innerAlpha = stone.hoverProgress * 0.4;
+            const innerGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, stone.size * 0.6);
+            innerGrad.addColorStop(0, `hsla(170, 90%, 80%, ${innerAlpha * 0.4})`);
+            innerGrad.addColorStop(0.5, `hsla(170, 70%, 50%, ${innerAlpha * 0.15})`);
+            innerGrad.addColorStop(1, `hsla(170, 50%, 30%, 0)`);
+            ctx.fillStyle = innerGrad;
+            this._createStonePath(ctx, stone);
+            ctx.fill();
+        }
+
+        // Energy cracks — bright lines radiating from center
+        if (stone.hoverProgress > 0.1) {
+            const crackAlpha = stone.hoverProgress * 0.6;
+            ctx.strokeStyle = `hsla(170, 90%, 80%, ${crackAlpha})`;
+            ctx.lineWidth = 0.8;
+            ctx.shadowColor = `hsla(170, 90%, 70%, ${crackAlpha})`;
+            ctx.shadowBlur = 10;
+
+            const numCracks = 4;
+            for (let i = 0; i < numCracks; i++) {
+                ctx.beginPath();
+                const ang = (Math.PI * 2 * i) / numCracks + stone.rotation * 0.5;
+                ctx.moveTo(0, 0);
+
+                // Jagged crack path
+                const segments = 3;
+                let px = 0, py = 0;
+                for (let s = 1; s <= segments; s++) {
+                    const progress = s / segments;
+                    const len = stone.size * 0.5 * progress;
+                    const jitter = (s < segments) ? ((i * 7 + s * 13) % 10 - 5) * 0.05 : 0;
+                    px = Math.cos(ang + jitter) * len;
+                    py = Math.sin(ang + jitter) * len;
+                    ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        ctx.restore();
+    }
+
+    /**
+     * Create the stone body path (reusable)
+     */
+    _createStonePath(ctx, stone) {
         ctx.beginPath();
         for (let i = 0; i < stone.shape.length; i++) {
             const p = stone.shape[i];
@@ -218,27 +345,7 @@ export class StoneRenderer {
             );
         }
         ctx.closePath();
-        ctx.stroke();
-
-        // Energy cracks — bright lines between stones
-        if (stone.hoverProgress > 0.1) {
-            const crackAlpha = stone.hoverProgress * 0.6;
-            ctx.strokeStyle = `hsla(170, 90%, 80%, ${crackAlpha})`;
-            ctx.lineWidth = 1;
-            ctx.shadowColor = `hsla(170, 90%, 70%, ${crackAlpha})`;
-            ctx.shadowBlur = 8;
-            for (let i = 0; i < 3; i++) {
-                ctx.beginPath();
-                const ang = (Math.PI * 2 * i) / 3 + stone.rotation;
-                ctx.moveTo(0, 0);
-                const len = stone.size * (0.4 + Math.random() * 0.3);
-                ctx.lineTo(Math.cos(ang) * len, Math.sin(ang) * len);
-                ctx.stroke();
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        ctx.restore();
+        return ctx;
     }
 
     /**
@@ -248,7 +355,6 @@ export class StoneRenderer {
      * @returns {Object|null} the stone under the cursor, or null
      */
     hitTest(x, y) {
-        // Test in reverse order (top-most first)
         for (let i = this.stones.length - 1; i >= 0; i--) {
             const stone = this.stones[i];
             const dx = x - stone.x;
@@ -263,9 +369,6 @@ export class StoneRenderer {
 
     /**
      * Start dragging a stone
-     * @param {Object} stone 
-     * @param {number} x 
-     * @param {number} y
      */
     startDrag(stone, x, y) {
         this.draggedStone = stone;
@@ -275,8 +378,6 @@ export class StoneRenderer {
 
     /**
      * Move dragged stone
-     * @param {number} x 
-     * @param {number} y
      */
     moveDrag(x, y) {
         if (this.draggedStone) {

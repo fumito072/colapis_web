@@ -31,11 +31,14 @@ export class SceneManager {
         this.mouse = { x: 0, y: 0 };
         this.isDragging = false;
         this.dragStartPos = { x: 0, y: 0 };
-        this.dragThreshold = 5; // px to distinguish click from drag
+        this.dragThreshold = 5;
 
         // Hand tracking cursor
-        this.handCursor = null; // { x, y, isPinching }
+        this.handCursor = null;
         this.handActive = false;
+
+        // Background stars (tiny static dots for depth)
+        this.stars = this._generateStars(60);
 
         // Stone labels DOM elements
         this.labelContainer = document.getElementById('stone-labels');
@@ -45,6 +48,24 @@ export class SceneManager {
         this._bindEvents();
         this._createLabels();
         this._animate();
+    }
+
+    /**
+     * Generate background star positions
+     */
+    _generateStars(count) {
+        const stars = [];
+        for (let i = 0; i < count; i++) {
+            stars.push({
+                x: Math.random(),
+                y: Math.random(),
+                size: 0.3 + Math.random() * 1.2,
+                alpha: 0.05 + Math.random() * 0.15,
+                twinkleSpeed: 0.5 + Math.random() * 2,
+                twinklePhase: Math.random() * Math.PI * 2,
+            });
+        }
+        return stars;
     }
 
     /**
@@ -68,7 +89,6 @@ export class SceneManager {
     _bindEvents() {
         window.addEventListener('resize', () => this._resize());
 
-        // Mouse events
         this.canvas.addEventListener('mousemove', (e) => this._onMouseMove(e));
         this.canvas.addEventListener('mousedown', (e) => this._onMouseDown(e));
         this.canvas.addEventListener('mouseup', (e) => this._onMouseUp(e));
@@ -77,7 +97,6 @@ export class SceneManager {
             this.canvas.style.cursor = 'default';
         });
 
-        // Touch events
         this.canvas.addEventListener('touchstart', (e) => this._onTouchStart(e), { passive: false });
         this.canvas.addEventListener('touchmove', (e) => this._onTouchMove(e), { passive: false });
         this.canvas.addEventListener('touchend', (e) => this._onTouchEnd(e));
@@ -90,7 +109,6 @@ export class SceneManager {
         if (!this.labelContainer) return;
         this.labelContainer.innerHTML = '';
 
-        // Wait for stones to initialize
         setTimeout(() => {
             for (const stone of this.stoneRenderer.stones) {
                 const label = document.createElement('div');
@@ -158,7 +176,6 @@ export class SceneManager {
             const stone = this.stoneRenderer.endDrag();
 
             if (dist < this.dragThreshold && stone) {
-                // It was a click, not a drag
                 this.onStoneClick(stone);
             }
 
@@ -186,7 +203,6 @@ export class SceneManager {
         if (this.isDragging && this.stoneRenderer.draggedStone) {
             this.stoneRenderer.moveDrag(touch.clientX, touch.clientY);
         }
-        // Update hover
         const hit = this.stoneRenderer.hitTest(touch.clientX, touch.clientY);
         this.stoneRenderer.hoveredStone = hit;
     }
@@ -194,7 +210,6 @@ export class SceneManager {
     _onTouchEnd(e) {
         if (this.isDragging) {
             const stone = this.stoneRenderer.endDrag();
-            // Check if it was a tap (short distance)
             if (e.changedTouches && e.changedTouches[0]) {
                 const touch = e.changedTouches[0];
                 const dx = touch.clientX - this.dragStartPos.x;
@@ -210,17 +225,12 @@ export class SceneManager {
 
     // ---- Hand tracking integration ----
 
-    /**
-     * Update hand cursor from HandTracker
-     * @param {{x: number, y: number, isPinching: boolean}|null} cursor
-     */
     setHandCursor(cursor) {
         this.handCursor = cursor;
         this.handActive = !!cursor;
 
         if (!cursor) return;
 
-        // Convert normalized coords to canvas coords
         const x = cursor.x * this.width;
         const y = cursor.y * this.height;
 
@@ -245,7 +255,6 @@ export class SceneManager {
                 }
                 this.isDragging = false;
             }
-            // Hover
             const hit = this.stoneRenderer.hitTest(x, y);
             this.stoneRenderer.hoveredStone = hit;
         }
@@ -263,6 +272,7 @@ export class SceneManager {
 
         this._clear();
         this._drawBackground(time);
+        this._drawStars(time);
 
         // Update
         this.stoneRenderer.update(time, dt);
@@ -271,7 +281,7 @@ export class SceneManager {
         );
         this.particleSystem.update(time, dt);
 
-        // Draw
+        // Draw (particles behind stones)
         this.particleSystem.draw(this.ctx);
         this.stoneRenderer.draw(this.ctx);
 
@@ -294,10 +304,10 @@ export class SceneManager {
     }
 
     /**
-     * Draw dark gradient background
+     * Draw dark gradient background with breathing glow
      */
     _drawBackground(time) {
-        // Deep dark background with subtle vignette
+        // Deep dark background with vignette
         const grad = this.ctx.createRadialGradient(
             this.width / 2, this.height / 2, 0,
             this.width / 2, this.height / 2, Math.max(this.width, this.height) * 0.7
@@ -308,16 +318,59 @@ export class SceneManager {
         this.ctx.fillStyle = grad;
         this.ctx.fillRect(0, 0, this.width, this.height);
 
-        // Subtle center glow
-        const centerGlow = this.ctx.createRadialGradient(
-            this.width / 2, this.height / 2, 0,
-            this.width / 2, this.height / 2, Math.min(this.width, this.height) * 0.4
+        // Breathing center glow — multi-layered for organic feel
+        const breath1 = 0.025 + Math.sin(time * 0.3) * 0.012;
+        const breath2 = 0.015 + Math.sin(time * 0.5 + 1) * 0.008;
+        const breath3 = 0.01 + Math.sin(time * 0.15) * 0.005;
+
+        // Layer 1: tight center glow
+        const glow1 = this.ctx.createRadialGradient(
+            this.width / 2, this.height * 0.48, 0,
+            this.width / 2, this.height * 0.48, Math.min(this.width, this.height) * 0.3
         );
-        const pulseAlpha = 0.02 + Math.sin(time * 0.3) * 0.01;
-        centerGlow.addColorStop(0, `hsla(170, 50%, 30%, ${pulseAlpha})`);
-        centerGlow.addColorStop(1, 'hsla(170, 50%, 30%, 0)');
-        this.ctx.fillStyle = centerGlow;
+        glow1.addColorStop(0, `hsla(170, 50%, 30%, ${breath1})`);
+        glow1.addColorStop(1, 'hsla(170, 50%, 30%, 0)');
+        this.ctx.fillStyle = glow1;
         this.ctx.fillRect(0, 0, this.width, this.height);
+
+        // Layer 2: wider ambient glow
+        const glow2 = this.ctx.createRadialGradient(
+            this.width / 2, this.height * 0.5, 0,
+            this.width / 2, this.height * 0.5, Math.min(this.width, this.height) * 0.55
+        );
+        glow2.addColorStop(0, `hsla(165, 40%, 25%, ${breath2})`);
+        glow2.addColorStop(1, 'hsla(165, 40%, 25%, 0)');
+        this.ctx.fillStyle = glow2;
+        this.ctx.fillRect(0, 0, this.width, this.height);
+
+        // Layer 3: slow peripheral pulse
+        const glow3 = this.ctx.createRadialGradient(
+            this.width / 2, this.height / 2, Math.min(this.width, this.height) * 0.2,
+            this.width / 2, this.height / 2, Math.max(this.width, this.height) * 0.6
+        );
+        glow3.addColorStop(0, 'hsla(170, 30%, 20%, 0)');
+        glow3.addColorStop(0.5, `hsla(175, 30%, 15%, ${breath3})`);
+        glow3.addColorStop(1, 'hsla(175, 30%, 15%, 0)');
+        this.ctx.fillStyle = glow3;
+        this.ctx.fillRect(0, 0, this.width, this.height);
+    }
+
+    /**
+     * Draw twinkling background stars
+     */
+    _drawStars(time) {
+        for (const star of this.stars) {
+            const twinkle = Math.sin(time * star.twinkleSpeed + star.twinklePhase) * 0.5 + 0.5;
+            const alpha = star.alpha * (0.3 + twinkle * 0.7);
+
+            const x = star.x * this.width;
+            const y = star.y * this.height;
+
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, star.size, 0, Math.PI * 2);
+            this.ctx.fillStyle = `hsla(170, 30%, 70%, ${alpha})`;
+            this.ctx.fill();
+        }
     }
 
     /**
@@ -329,11 +382,21 @@ export class SceneManager {
         const radius = cursor.isPinching ? 8 : 12;
         const alpha = cursor.isPinching ? 0.6 : 0.3;
 
+        // Outer ring
         this.ctx.beginPath();
         this.ctx.arc(x, y, radius, 0, Math.PI * 2);
         this.ctx.strokeStyle = `hsla(170, 80%, 65%, ${alpha})`;
         this.ctx.lineWidth = 2;
         this.ctx.stroke();
+
+        // Glow
+        const cursorGlow = this.ctx.createRadialGradient(x, y, 0, x, y, radius * 2);
+        cursorGlow.addColorStop(0, `hsla(170, 80%, 65%, ${alpha * 0.3})`);
+        cursorGlow.addColorStop(1, 'hsla(170, 80%, 65%, 0)');
+        this.ctx.fillStyle = cursorGlow;
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, radius * 2, 0, Math.PI * 2);
+        this.ctx.fill();
 
         if (cursor.isPinching) {
             this.ctx.beginPath();

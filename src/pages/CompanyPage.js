@@ -3,9 +3,9 @@
  * Minimal placeholder, designed for easy content expansion
  */
 export function createCompanyPage() {
-    const container = document.createElement('div');
-    container.className = 'page-content';
-    container.innerHTML = `
+  const container = document.createElement('div');
+  container.className = 'page-content';
+  container.innerHTML = `
     <h2 class="page-title">会社紹介</h2>
     <p class="page-subtitle">
       COLAPIS — 3Dテクノロジーで未来を創造する
@@ -17,5 +17,5 @@ export function createCompanyPage() {
       </p>
     </div>
   `;
-    return container;
+  return container;
 }
