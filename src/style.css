@@ -424,6 +424,138 @@ body {
 }
 
 /* ============================================
+   World 2 Container
+   ============================================ */
+
+#world2-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 80;
+  display: none;
+}
+
+/* ============================================
+   World 2 — CSS2DRenderer Content
+   ============================================ */
+
+.w2-content-title {
+  text-align: center;
+  animation: w2FadeIn 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  pointer-events: none;
+}
+
+.w2-title {
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  font-weight: 300;
+  letter-spacing: 0.3em;
+  color: #e0e8f5;
+  text-shadow: 0 0 30px rgba(168, 200, 255, 0.2);
+  margin-bottom: 0.4rem;
+}
+
+.w2-subtitle {
+  font-size: clamp(0.6rem, 1.2vw, 0.85rem);
+  color: #6080a0;
+  letter-spacing: 0.15em;
+  font-weight: 400;
+}
+
+.w2-section-card {
+  background: rgba(10, 16, 32, 0.6);
+  border: 1px solid rgba(168, 200, 255, 0.08);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  min-width: 200px;
+  max-width: 340px;
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(15px);
+  animation: w2CardEnter 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  margin-top: 0.8rem;
+}
+
+.w2-section-heading {
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: #a8c8ff;
+  margin-bottom: 0.5rem;
+}
+
+.w2-section-body {
+  font-size: 0.72rem;
+  color: #8098b8;
+  line-height: 1.8;
+  letter-spacing: 0.03em;
+}
+
+.w2-stone-label {
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  color: #6080a0;
+  text-align: center;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  background: rgba(10, 16, 32, 0.4);
+  border: 1px solid rgba(168, 200, 255, 0.06);
+  transition:
+    color 0.3s ease,
+    border-color 0.3s ease,
+    background 0.3s ease;
+  white-space: nowrap;
+}
+
+.w2-stone-label:hover {
+  color: #a8c8ff;
+  border-color: rgba(168, 200, 255, 0.2);
+  background: rgba(10, 16, 32, 0.7);
+}
+
+@keyframes w2FadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    filter: blur(3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes w2CardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+    filter: blur(2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* World 2 back button tweak */
+.world2-back {
+  border-color: rgba(168, 200, 255, 0.12);
+  color: #6080a0;
+}
+
+.world2-back:hover {
+  border-color: rgba(168, 200, 255, 0.3);
+  color: #a8c8ff;
+}
+
+/* ============================================
    Responsive
    ============================================ */
 

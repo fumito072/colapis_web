@@ -1,100 +1,108 @@
 /**
  * COLAPIS Homepage — Main Entry Point
- * Wires together Scene, Router, and HandTracker
+ * Manages World 1 (Canvas 2D) and World 2 (Three.js 3D) scenes.
  */
 import './style.css';
 import { SceneManager } from './canvas/SceneManager.js';
-import { Router } from './router.js';
 import { HandTracker } from './tracking/HandTracker.js';
-import { createCompanyPage } from './pages/CompanyPage.js';
-import { createServicesPage } from './pages/ServicesPage.js';
-import { createWorksPage } from './pages/WorksPage.js';
 
 // ---- DOM References ----
 const canvas = document.getElementById('main-canvas');
 const titleOverlay = document.getElementById('title-overlay');
-const pageContainer = document.getElementById('page-container');
+const stoneLabels = document.getElementById('stone-labels');
+const world2Container = document.getElementById('world2-container');
+const handTrackingBtn = document.getElementById('hand-tracking-btn');
 
-// ---- Router Setup ----
-const router = new Router();
+// ---- State ----
+let currentWorld = 'world1'; // 'world1' | 'world2'
+let world2Scene = null;
 
-router
-  .add('#/', null) // Top page — handled by canvas scene
-  .add('#/company', createCompanyPage)
-  .add('#/services', createServicesPage)
-  .add('#/works', createWorksPage);
-
-router.onRouteChange = (route, prevRoute) => {
-  if (router.isTopPage()) {
-    // Show canvas, hide page
-    showTopPage();
-  } else {
-    const handler = router.getHandler();
-    if (handler) {
-      showPage(handler);
-    }
-  }
-};
-
-// ---- Scene Setup ----
+// ---- World 1 Scene ----
 const scene = new SceneManager(canvas, (stone) => {
-  // Stone clicked — navigate to its route
-  router.navigate(stone.route);
+  // Stone clicked in World 1 → transition to World 2
+  enterWorld2(stone.id);
 });
 
-// ---- Hand Tracker Setup ----
+// ---- Hand Tracker ----
 const handTracker = new HandTracker();
 handTracker.onCursorUpdate = (cursor) => {
   scene.setHandCursor(cursor);
 };
 
-// ---- Page Navigation ----
+// ---- World Transition ----
 
-function showTopPage() {
-  // Fade out page container
-  pageContainer.classList.remove('visible');
-  pageContainer.classList.add('hidden');
+async function enterWorld2(stoneId) {
+  if (currentWorld === 'world2') return;
+  currentWorld = 'world2';
 
-  // Show canvas & title
-  canvas.style.display = 'block';
-  titleOverlay.classList.remove('hidden');
+  // Fade out World 1 elements
+  titleOverlay.classList.add('hidden');
+  stoneLabels.style.opacity = '0';
+  stoneLabels.style.transition = 'opacity 0.5s ease';
+  handTrackingBtn.style.opacity = '0';
+  handTrackingBtn.style.pointerEvents = 'none';
 
-  // Clean up page content after animation
-  setTimeout(() => {
-    pageContainer.innerHTML = '';
-  }, 600);
+  // Fade out canvas
+  canvas.style.transition = 'opacity 0.6s ease';
+  canvas.style.opacity = '0';
+
+  // Wait for fade
+  await delay(600);
+
+  // Hide World 1 elements
+  canvas.style.display = 'none';
+  scene.destroy();
+
+  // Lazy-load World 2 scene
+  if (!world2Scene) {
+    const { SceneManager3D } = await import('./world2/SceneManager3D.js');
+    world2Scene = new SceneManager3D(world2Container, exitWorld2);
+  }
+
+  // Enter World 2 with selected stone
+  world2Scene.enter(stoneId);
 }
 
-function showPage(pageFactory) {
-  // Create page content
-  const content = pageFactory();
+function exitWorld2() {
+  if (currentWorld === 'world1') return;
+  currentWorld = 'world1';
 
-  // Add back button
-  const backBtn = document.createElement('button');
-  backBtn.className = 'back-btn';
-  backBtn.innerHTML = `
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M19 12H5M12 19l-7-7 7-7"/>
-    </svg>
-    <span>戻る</span>
-  `;
-  backBtn.addEventListener('click', () => router.goHome());
+  // Exit World 2 scene
+  if (world2Scene) {
+    world2Scene.exit();
+  }
 
-  // Hide canvas & title
-  titleOverlay.classList.add('hidden');
+  // Re-show World 1 after a brief delay
+  setTimeout(() => {
+    // Show canvas
+    canvas.style.display = 'block';
 
-  // Show page container
-  pageContainer.innerHTML = '';
-  pageContainer.appendChild(backBtn);
-  pageContainer.appendChild(content);
-  pageContainer.classList.remove('hidden');
-  pageContainer.classList.add('visible');
+    // Reinitialize World 1 scene by forcing a resize
+    canvas.style.opacity = '0';
+    requestAnimationFrame(() => {
+      canvas.style.transition = 'opacity 0.8s ease';
+      canvas.style.opacity = '1';
+    });
+
+    // Show title and controls
+    titleOverlay.classList.remove('hidden');
+    stoneLabels.style.opacity = '1';
+    handTrackingBtn.style.opacity = '1';
+    handTrackingBtn.style.pointerEvents = 'auto';
+
+    // Restart World 1 scene
+    scene.running = true;
+    scene._resize();
+    scene._animate();
+  }, 900);
+}
+
+// ---- Utility ----
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // ---- Initialize ----
-router.init();
-
-// If no hash, default to top
-if (!window.location.hash || window.location.hash === '#') {
-  window.location.hash = '#/';
-}
+// Default to World 1 (top page)
+canvas.style.display = 'block';
+canvas.style.opacity = '1';
