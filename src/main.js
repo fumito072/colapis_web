@@ -1,9 +1,9 @@
 /**
  * COLAPIS Homepage — Main Entry Point
- * Manages World 1 (Canvas 2D) and World 2 (Three.js 3D) scenes.
+ * Manages World 1 (Three.js 3D stones) and World 2 (Three.js 3D detail) scenes.
  */
 import './style.css';
-import { SceneManager } from './canvas/SceneManager.js';
+import { SceneManager3DWorld1 } from './world1/SceneManager3DWorld1.js';
 import { HandTracker } from './tracking/HandTracker.js';
 
 // ---- DOM References ----
@@ -17,9 +17,9 @@ const handTrackingBtn = document.getElementById('hand-tracking-btn');
 let currentWorld = 'world1'; // 'world1' | 'world2'
 let world2Scene = null;
 
-// ---- World 1 Scene ----
-const scene = new SceneManager(canvas, (stone) => {
-  // Stone clicked in World 1 → transition to World 2
+// ---- World 1 Scene (Three.js) ----
+const scene = new SceneManager3DWorld1(canvas, (stone) => {
+  // Stone dissolve completed in World 1 → transition to World 2
   enterWorld2(stone.id);
 });
 
@@ -35,21 +35,19 @@ async function enterWorld2(stoneId) {
   if (currentWorld === 'world2') return;
   currentWorld = 'world2';
 
-  // Fade out World 1 elements
+  // Fade out World 1 overlay elements
   titleOverlay.classList.add('hidden');
-  stoneLabels.style.opacity = '0';
-  stoneLabels.style.transition = 'opacity 0.5s ease';
   handTrackingBtn.style.opacity = '0';
   handTrackingBtn.style.pointerEvents = 'none';
 
-  // Fade out canvas
-  canvas.style.transition = 'opacity 0.6s ease';
+  // Fade out canvas (the dissolve animation already took care of the visual)
+  canvas.style.transition = 'opacity 0.8s ease';
   canvas.style.opacity = '0';
 
   // Wait for fade
-  await delay(600);
+  await delay(900);
 
-  // Hide World 1 elements
+  // Hide World 1
   canvas.style.display = 'none';
   scene.destroy();
 
@@ -77,7 +75,7 @@ function exitWorld2() {
     // Show canvas
     canvas.style.display = 'block';
 
-    // Reinitialize World 1 scene by forcing a resize
+    // Fade in
     canvas.style.opacity = '0';
     requestAnimationFrame(() => {
       canvas.style.transition = 'opacity 0.8s ease';
@@ -91,9 +89,7 @@ function exitWorld2() {
     handTrackingBtn.style.pointerEvents = 'auto';
 
     // Restart World 1 scene
-    scene.running = true;
-    scene._resize();
-    scene._animate();
+    scene.restart();
   }, 900);
 }
 
@@ -103,6 +99,5 @@ function delay(ms) {
 }
 
 // ---- Initialize ----
-// Default to World 1 (top page)
 canvas.style.display = 'block';
 canvas.style.opacity = '1';
