@@ -1,6 +1,13 @@
 /**
  * COLAPIS Homepage — Main Entry Point
- * Manages World 1 (Three.js 3D stones) and World 2 (Three.js 3D detail) scenes.
+ *
+ * Seamless transition architecture:
+ * - World 1 owns the single WebGLRenderer, Scene, Camera, EffectComposer
+ * - World 2 adds its objects to the shared scene at z=-15
+ * - Camera flies from z=5.5 (World 1) to z=-10 (World 2) during transition
+ * - Dissolve particles stream forward (-z), bridging both worlds
+ * - Background particles span the full depth range
+ * - No canvas hide/show — one continuous rendering pipeline
  */
 import './style.css';
 import { SceneManager3DWorld1 } from './world1/SceneManager3DWorld1.js';
@@ -17,10 +24,10 @@ const handTrackingBtn = document.getElementById('hand-tracking-btn');
 let currentWorld = 'world1'; // 'world1' | 'world2'
 let world2Scene = null;
 
-// ---- World 1 Scene (Three.js) ----
-const scene = new SceneManager3DWorld1(canvas, (stone) => {
-  // Stone dissolve completed in World 1 → transition to World 2
-  enterWorld2(stone.id);
+// ---- World 1 Scene (Three.js — owns the renderer) ----
+const scene = new SceneManager3DWorld1(canvas, async (stone) => {
+  // Dissolve phase completed → set up World 2 in the shared scene
+  await setupWorld2(stone.id);
 });
 
 // ---- Hand Tracker ----
@@ -31,72 +38,57 @@ handTracker.onCursorUpdate = (cursor) => {
 
 // ---- World Transition ----
 
-async function enterWorld2(stoneId) {
+/**
+ * Set up World 2 in the shared scene. Called during the camera flight
+ * (Phase 5 of dissolve), so World 2 objects appear as camera approaches.
+ */
+async function setupWorld2(stoneId) {
   if (currentWorld === 'world2') return;
   currentWorld = 'world2';
 
-  // Fade out World 1 overlay elements
+  // Hide World 1 UI elements
   titleOverlay.classList.add('hidden');
   handTrackingBtn.style.opacity = '0';
   handTrackingBtn.style.pointerEvents = 'none';
 
-  // Fade out canvas (the dissolve animation already took care of the visual)
-  canvas.style.transition = 'opacity 0.8s ease';
-  canvas.style.opacity = '0';
-
-  // Wait for fade
-  await delay(900);
-
-  // Hide World 1
-  canvas.style.display = 'none';
-  scene.destroy();
-
   // Lazy-load World 2 scene
   if (!world2Scene) {
     const { SceneManager3D } = await import('./world2/SceneManager3D.js');
-    world2Scene = new SceneManager3D(world2Container, exitWorld2);
+    const ctx = scene.getSceneContext();
+    world2Scene = new SceneManager3D(world2Container, ctx, exitWorld2);
   }
 
-  // Enter World 2 with selected stone
+  // Register with World 1's animation loop
+  scene.setWorld2Manager(world2Scene);
+
+  // Enter World 2 (adds objects to shared scene)
   world2Scene.enter(stoneId);
 }
 
+/**
+ * Return from World 2 to World 1. Camera flies back, World 2 fades out.
+ */
 function exitWorld2() {
   if (currentWorld === 'world1') return;
   currentWorld = 'world1';
 
-  // Exit World 2 scene
+  // Exit World 2 (collapse fragments, fade lights)
   if (world2Scene) {
     world2Scene.exit();
   }
 
-  // Re-show World 1 after a brief delay
+  // Animate camera back to World 1 position
+  scene.returnFromWorld2();
+
+  // Re-show World 1 UI after camera returns
   setTimeout(() => {
-    // Show canvas
-    canvas.style.display = 'block';
-
-    // Fade in
-    canvas.style.opacity = '0';
-    requestAnimationFrame(() => {
-      canvas.style.transition = 'opacity 0.8s ease';
-      canvas.style.opacity = '1';
-    });
-
-    // Show title and controls
     titleOverlay.classList.remove('hidden');
     stoneLabels.style.opacity = '1';
     handTrackingBtn.style.opacity = '1';
     handTrackingBtn.style.pointerEvents = 'auto';
-
-    // Restart World 1 scene
-    scene.restart();
-  }, 900);
+  }, 2800);
 }
 
-// ---- Utility ----
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
 
 // ---- Initialize ----
 canvas.style.display = 'block';

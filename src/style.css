@@ -4,8 +4,8 @@
 
 :root {
   /* Colors — Dark mystical palette */
-  --color-bg: #060d0b;
-  --color-bg-deep: #030806;
+  --color-bg: #000000;
+  --color-bg-deep: #000000;
   --color-surface: #0a1613;
   --color-surface-light: #132a24;
   --color-accent: #2dd4a8;
@@ -435,113 +435,199 @@ body {
   height: 100%;
   z-index: 80;
   display: none;
+  pointer-events: none;
+}
+
+#world2-container > * {
+  pointer-events: auto;
+}
+
+#world2-container > div[style*="pointer-events: none"] {
+  pointer-events: none !important;
 }
 
 /* ============================================
-   World 2 — CSS2DRenderer Content
+   Vortex Scroll Content Sections
    ============================================ */
 
-.w2-content-title {
-  text-align: center;
-  animation: w2FadeIn 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  pointer-events: none;
-}
-
-.w2-title {
-  font-size: clamp(1.4rem, 3vw, 2.2rem);
-  font-weight: 300;
-  letter-spacing: 0.3em;
-  color: #e0e8f5;
-  text-shadow: 0 0 30px rgba(168, 200, 255, 0.2);
-  margin-bottom: 0.4rem;
-}
-
-.w2-subtitle {
-  font-size: clamp(0.6rem, 1.2vw, 0.85rem);
-  color: #6080a0;
-  letter-spacing: 0.15em;
-  font-weight: 400;
-}
-
-.w2-section-card {
-  background: rgba(10, 16, 32, 0.6);
-  border: 1px solid rgba(168, 200, 255, 0.08);
-  border-radius: 12px;
-  padding: 1rem 1.5rem;
-  min-width: 200px;
-  max-width: 340px;
-  backdrop-filter: blur(8px);
-  pointer-events: none;
+.vortex-section {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 45%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 3vw;
   opacity: 0;
-  transform: translateY(15px);
-  animation: w2CardEnter 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  margin-top: 0.8rem;
+  pointer-events: none;
+  transition: opacity 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  z-index: 91;
 }
 
-.w2-section-heading {
+.vortex-section.revealed {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.vortex-section-inner {
+  text-align: left;
+  max-width: 480px;
+  padding: 2rem;
+}
+
+/* Decorative line that grows from center */
+.vortex-section-line {
+  width: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255,200,100,0.6), rgba(255,255,255,0.3), transparent);
+  margin: 0 0 2rem;
+  transition: width 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s;
+}
+
+.vortex-section.revealed .vortex-section-line {
+  width: 120px;
+}
+
+/* Title — appears with a glitch-like reveal */
+.vortex-section-title {
+  font-size: clamp(1.6rem, 4vw, 2.8rem);
+  font-weight: 200;
+  letter-spacing: 0.5em;
+  color: #ffffff;
+  margin: 0 0 0.5rem;
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+  filter: blur(8px);
+  transition:
+    opacity 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.3s,
+    transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.3s,
+    filter 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.3s;
+  text-shadow: 0 0 40px rgba(255, 255, 255, 0.3);
+}
+
+.vortex-section.revealed .vortex-section-title {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+}
+
+.vortex-section-subtitle {
+  font-size: clamp(0.65rem, 1.3vw, 0.9rem);
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.2em;
+  font-weight: 300;
+  margin: 0 0 2.5rem;
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 0.6s ease 0.5s,
+    transform 0.6s ease 0.5s;
+}
+
+.vortex-section.revealed .vortex-section-subtitle {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Cards container */
+.vortex-section-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+/* Individual card — staggered reveal */
+.vortex-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.2rem 1.5rem;
+  min-width: 0;
+  max-width: 100%;
+  flex: none;
+  backdrop-filter: blur(12px);
+  text-align: left;
+  opacity: 0;
+  transform: translateY(30px) scale(0.9);
+  filter: blur(4px);
+  transition:
+    opacity 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    filter 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    border-color 0.3s ease;
+  transition-delay: calc(0.6s + var(--card-delay, 0) * 0.15s);
+}
+
+.vortex-section.revealed .vortex-card {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+}
+
+.vortex-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.vortex-card-heading {
   font-size: 0.85rem;
   font-weight: 500;
   letter-spacing: 0.12em;
-  color: #a8c8ff;
+  color: rgba(255, 255, 255, 0.85);
   margin-bottom: 0.5rem;
 }
 
-.w2-section-body {
+.vortex-card-body {
   font-size: 0.72rem;
-  color: #8098b8;
-  line-height: 1.8;
-  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.9;
+  letter-spacing: 0.04em;
 }
 
-.w2-stone-label {
-  font-size: 0.7rem;
-  font-weight: 500;
+/* ============================================
+   Scroll Indicator
+   ============================================ */
+
+.vortex-scroll-indicator {
+  position: fixed;
+  bottom: 3rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  pointer-events: none;
+  z-index: 95;
+}
+
+.vortex-scroll-indicator.visible {
+  opacity: 1;
+}
+
+.vortex-scroll-indicator span {
+  font-size: 0.65rem;
   letter-spacing: 0.15em;
-  color: #6080a0;
-  text-align: center;
-  padding: 0.3rem 0.6rem;
-  border-radius: 4px;
-  background: rgba(10, 16, 32, 0.4);
-  border: 1px solid rgba(168, 200, 255, 0.06);
-  transition:
-    color 0.3s ease,
-    border-color 0.3s ease,
-    background 0.3s ease;
-  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.3);
+  font-weight: 300;
 }
 
-.w2-stone-label:hover {
-  color: #a8c8ff;
-  border-color: rgba(168, 200, 255, 0.2);
-  background: rgba(10, 16, 32, 0.7);
+.scroll-arrow {
+  width: 20px;
+  height: 20px;
+  border-right: 1px solid rgba(255, 255, 255, 0.35);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+  transform: rotate(45deg);
+  animation: scrollBounce 2s ease-in-out infinite;
 }
 
-@keyframes w2FadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-    filter: blur(3px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-    filter: blur(0);
-  }
-}
-
-@keyframes w2CardEnter {
-  from {
-    opacity: 0;
-    transform: translateY(15px);
-    filter: blur(2px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-    filter: blur(0);
-  }
+@keyframes scrollBounce {
+  0%, 100% { transform: rotate(45deg) translateY(0); opacity: 0.3; }
+  50% { transform: rotate(45deg) translateY(6px); opacity: 0.8; }
 }
 
 /* World 2 back button tweak */

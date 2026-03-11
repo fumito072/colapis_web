@@ -97,6 +97,9 @@ export class SceneManager3DWorld1 {
     this.dissolving = false;  // lock during dissolve animation
     this.merging = false;      // lock during logo merge animation
     this.logoDissolveParticles = null; // combined dissolve for merged logo
+    this.inTransition = false; // camera flying to/from World 2
+    this.cameraLookTarget = new THREE.Vector3(0, 0, 0);
+    this.world2Manager = null; // reference to World 2 scene manager
 
     // Labels
     this.labelContainer = document.getElementById('stone-labels');
@@ -119,7 +122,7 @@ export class SceneManager3DWorld1 {
 
   _initScene() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x030806);
+    this.scene.background = new THREE.Color(0x000000);
 
     const aspect = window.innerWidth / window.innerHeight;
     this.camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 100);
@@ -589,6 +592,11 @@ export class SceneManager3DWorld1 {
           value: 1.0, duration: 2.0, ease: 'power1.inOut',
         });
 
+        // Forward pull — particles stream into depth
+        gsap.to(dissolve.material.uniforms.uForwardPull, {
+          value: 1.0, duration: 1.5, delay: 0.5, ease: 'power2.in',
+        });
+
         // Aura fades
         gsap.to(aura.material.uniforms.uIntensity, {
           value: 0, duration: 1.2, delay: 0.5, ease: 'power2.out',
@@ -599,21 +607,43 @@ export class SceneManager3DWorld1 {
       gsap.to(this.bloomPass, {
         strength: 0.8, duration: 1.5, delay: 0.5, ease: 'power2.out',
       });
-
-      // Camera pulls back slightly
-      gsap.to(this.camera.position, {
-        z: 5.5, duration: 1.5, ease: 'power2.inOut',
-      });
     }, shatterDelay * 1000);
 
     // ============================================
-    // Phase 5: Callback to World 2
+    // Phase 5: Camera flight into World 2 (3.5s from start)
     // ============================================
     setTimeout(() => {
+      this.inTransition = true;
+
+      // Animate camera forward
+      gsap.to(this.camera.position, {
+        z: -10, duration: 3.0, ease: 'power2.inOut',
+      });
+
+      // Animate lookAt target deeper
+      gsap.to(this.cameraLookTarget, {
+        z: -15, duration: 3.0, ease: 'power2.inOut',
+      });
+
+      // Shift background color — stays black (galaxy will provide color)
+      gsap.to(this.scene.background, {
+        r: 0, g: 0, b: 0,
+        duration: 3.0, ease: 'power2.inOut',
+      });
+
+      // Bloom surge during flight
+      gsap.to(this.bloomPass, {
+        strength: 1.4, duration: 1.2, ease: 'power2.out',
+      });
+      gsap.to(this.bloomPass, {
+        strength: 0.6, duration: 1.5, delay: 1.5, ease: 'power2.in',
+      });
+
+      // Notify main.js to set up World 2
       if (this.onStoneClick) {
         this.onStoneClick({ id: stoneId });
       }
-    }, 5000);
+    }, 3500);
   }
 
   /**
@@ -622,10 +652,15 @@ export class SceneManager3DWorld1 {
   resetStones() {
     this.dissolving = false;
     this.merging = false;
+    this.inTransition = false;
 
     // Reset camera
     this.camera.position.set(0, 0, 5.5);
+    this.cameraLookTarget.set(0, 0, 0);
     this.camera.lookAt(0, 0, 0);
+
+    // Reset scene background to black
+    this.scene.background.setRGB(0, 0, 0);
 
     // Reset bloom
     this.bloomPass.strength = 0.8;
@@ -640,6 +675,7 @@ export class SceneManager3DWorld1 {
 
       aura.material.uniforms.uIntensity.value = 0;
       dissolve.material.uniforms.uProgress.value = 0;
+      dissolve.material.uniforms.uForwardPull.value = 0;
       dissolve.visible = false;
 
       // Reset position
@@ -671,6 +707,62 @@ export class SceneManager3DWorld1 {
       label.style.opacity = '';
       label.classList.remove('visible', 'active');
     }
+  }
+
+  // =============================================
+  //  SHARED SCENE CONTEXT
+  // =============================================
+
+  /** Expose scene context for World 2 to share */
+  getSceneContext() {
+    return {
+      scene: this.scene,
+      camera: this.camera,
+      renderer: this.renderer,
+      composer: this.composer,
+      bloomPass: this.bloomPass,
+    };
+  }
+
+  setWorld2Manager(manager) {
+    this.world2Manager = manager;
+  }
+
+  removeWorld2Manager() {
+    this.world2Manager = null;
+  }
+
+  /**
+   * Animate camera back from World 2 to World 1 position.
+   * Called by main.js when user clicks "back".
+   */
+  returnFromWorld2() {
+    // Animate camera back
+    gsap.to(this.camera.position, {
+      z: 5.5, duration: 2.5, ease: 'power2.inOut',
+    });
+
+    gsap.to(this.cameraLookTarget, {
+      z: 0, duration: 2.5, ease: 'power2.inOut',
+    });
+
+    // Shift background back to black
+    gsap.to(this.scene.background, {
+      r: 0, g: 0, b: 0,
+      duration: 2.5, ease: 'power2.inOut',
+    });
+
+    // Restore bloom
+    gsap.to(this.bloomPass, {
+      strength: 0.8, duration: 2.0, ease: 'power2.inOut',
+    });
+
+    // After camera arrives, reset stones
+    setTimeout(() => {
+      this.inTransition = false;
+      this.resetStones();
+      this.removeWorld2Manager();
+    }, 2700);
   }
 
   // =============================================
@@ -779,6 +871,14 @@ export class SceneManager3DWorld1 {
     // ---- Update background ----
     this.bgParticles.material.uniforms.uTime.value = time;
 
+    // ---- Camera lookAt (animated during transition) ----
+    this.camera.lookAt(this.cameraLookTarget);
+
+    // ---- Update World 2 if active ----
+    if (this.world2Manager) {
+      this.world2Manager.update(time, dt);
+    }
+
     // ---- Update labels ----
     this._updateLabels();
 
@@ -834,5 +934,10 @@ export class SceneManager3DWorld1 {
 
   destroy() {
     this.running = false;
+    // Full cleanup — only call on page unload, not during transition
+    if (this.world2Manager) {
+      this.world2Manager.destroy();
+      this.world2Manager = null;
+    }
   }
 }

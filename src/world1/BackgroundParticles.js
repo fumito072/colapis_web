@@ -46,8 +46,9 @@ const bgFragmentShader = /* glsl */`
 
 export function createBackgroundParticles(config = {}) {
   const {
-    count = 400,
+    count = 500,
     spread = 30,
+    zDepth = 45,
     color = new THREE.Color(0.2, 0.6, 0.5),
     pointSize = 0.06,
   } = config;
@@ -61,7 +62,7 @@ export function createBackgroundParticles(config = {}) {
   for (let i = 0; i < count; i++) {
     positions[i * 3]     = (Math.random() - 0.5) * spread;
     positions[i * 3 + 1] = (Math.random() - 0.5) * spread * 0.7;
-    positions[i * 3 + 2] = -2 - Math.random() * spread;
+    positions[i * 3 + 2] = -2 - Math.random() * zDepth;
     
     sizes[i] = 0.2 + Math.random() * 1.2;
     phases[i] = Math.random() * Math.PI * 2;

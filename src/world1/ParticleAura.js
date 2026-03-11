@@ -144,6 +144,7 @@ const dissolveVertexShader = /* glsl */`
   uniform float uTime;
   uniform float uProgress;     // 0 = on surface, 1 = fully dispersed
   uniform float uPointSize;
+  uniform float uForwardPull;  // 0 = normal dissolve, 1 = stream forward into depth
   
   varying float vAlpha;
   varying float vProgress;
@@ -175,7 +176,10 @@ const dissolveVertexShader = /* glsl */`
     // Gravity-like downward pull at the end
     vec3 gravity = vec3(0.0, -localTime * localTime * 0.05, 0.0);
     
-    vec3 pos = aStartPos + (outward + spiral + gravity) * released;
+    // Forward pull into depth during world transition
+    vec3 forward = vec3(0.0, 0.0, -localTime * aSpeed * uForwardPull * 3.0);
+    
+    vec3 pos = aStartPos + (outward + spiral + gravity + forward) * released;
     
     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
     
@@ -259,6 +263,7 @@ export function createDissolveParticles(surfacePoints, surfaceNormals, config = 
       uColor: { value: color },
       uCoreColor: { value: coreColor },
       uPointSize: { value: pointSize },
+      uForwardPull: { value: 0 },
     },
     transparent: true,
     blending: THREE.AdditiveBlending,
