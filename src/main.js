@@ -16,7 +16,6 @@ import { HandTracker } from './tracking/HandTracker.js';
 // ---- DOM References ----
 const canvas = document.getElementById('main-canvas');
 const titleOverlay = document.getElementById('title-overlay');
-const stoneLabels = document.getElementById('stone-labels');
 const world2Container = document.getElementById('world2-container');
 const handTrackingBtn = document.getElementById('hand-tracking-btn');
 
@@ -83,7 +82,6 @@ function exitWorld2() {
   // Re-show World 1 UI after camera returns
   setTimeout(() => {
     titleOverlay.classList.remove('hidden');
-    stoneLabels.style.opacity = '1';
     handTrackingBtn.style.opacity = '1';
     handTrackingBtn.style.pointerEvents = 'auto';
   }, 2800);
