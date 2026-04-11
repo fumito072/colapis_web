@@ -17,6 +17,12 @@ export class SceneManager3DWorld1 {
     this.scrollProgress = 0;
     this.targetScroll = 0;
     this.videoDuration = 10; // Fallback until loaded
+    this.videoReady = false;
+    this.videoPrimed = false;
+    this.videoSeeking = false;
+    this.videoTargetTime = 0;
+    this.lastVideoSeekAt = 0;
+    this.lastAppliedVideoTime = -1;
     
     this.world2Manager = null;
     this.inTransition = false;
@@ -87,10 +93,19 @@ export class SceneManager3DWorld1 {
     this.video.loop = false;
     this.video.muted = true;
     this.video.playsInline = true;
+    this.video.setAttribute('playsinline', '');
+    this.video.setAttribute('webkit-playsinline', '');
     this.video.preload = 'auto'; // Load data ahead for smooth scrubbing
     
     this.video.addEventListener('loadedmetadata', () => {
       this.videoDuration = this.video.duration || 10;
+      this.videoReady = true;
+    });
+    this.video.addEventListener('seeking', () => {
+      this.videoSeeking = true;
+    });
+    this.video.addEventListener('seeked', () => {
+      this.videoSeeking = false;
     });
     this.video.load(); // Force preload
     
@@ -99,6 +114,7 @@ export class SceneManager3DWorld1 {
     this.videoTexture.magFilter = THREE.LinearFilter;
     this.videoTexture.format = THREE.RGBAFormat;
     this.videoTexture.colorSpace = THREE.SRGBColorSpace;
+    this.videoTexture.generateMipmaps = false;
     
     // Position background plane sufficiently far back
     this.bgDistance = 60;
@@ -283,6 +299,7 @@ export class SceneManager3DWorld1 {
     this.touchStartY = 0;
     this.canvas.addEventListener('touchstart', (e) => {
       if(e.cancelable) e.preventDefault();
+      this._primeVideoPlayback();
       const t = e.touches[0];
       this.touchStartY = t.clientY;
       this.mouseNDC.set((t.clientX / window.innerWidth) * 2 - 1, -(t.clientY / window.innerHeight) * 2 + 1);
@@ -308,13 +325,43 @@ export class SceneManager3DWorld1 {
 
   _onWheel(e) {
     if (this.inTransition) return;
+    this._primeVideoPlayback();
     this.targetScroll += e.deltaY * 0.0006;
     this.targetScroll = Math.max(0, Math.min(1.4, this.targetScroll));
+  }
 
-    // Try to unlock video playback context if suspended by browser
-    if (this.video && this.video.paused) {
-       this.video.play().then(() => this.video.pause()).catch(() => {});
-    }
+  _primeVideoPlayback() {
+    if (!this.video || this.videoPrimed) return;
+    this.videoPrimed = true;
+    this.video.play()
+      .then(() => this.video.pause())
+      .catch(() => {
+        this.videoPrimed = false;
+      });
+  }
+
+  _syncVideoToScroll() {
+    if (!this.video || !this.videoReady || this.inTransition) return;
+
+    const safeScroll = Math.min(this.scrollProgress, 1.0);
+    const targetTime = safeScroll * Math.max(this.videoDuration - 0.1, 0);
+    const currentTime = this.video.currentTime || 0;
+    const drift = Math.abs(targetTime - currentTime);
+    const now = performance.now();
+    const seekIntervalMs = 1000 / 15;
+    const seekStep = 1 / 24;
+    const forceSeekThreshold = 0.2;
+
+    this.videoTargetTime = targetTime;
+
+    if (drift < 1 / 60) return;
+    if (this.videoSeeking && drift < forceSeekThreshold) return;
+    if (now - this.lastVideoSeekAt < seekIntervalMs && drift < forceSeekThreshold) return;
+    if (Math.abs(targetTime - this.lastAppliedVideoTime) < seekStep && drift < forceSeekThreshold) return;
+
+    this.lastVideoSeekAt = now;
+    this.lastAppliedVideoTime = targetTime;
+    this.video.currentTime = targetTime;
   }
 
   _onResize() {
@@ -398,13 +445,8 @@ export class SceneManager3DWorld1 {
       this.scrollIndicator.style.opacity = this.scrollProgress > 0.05 ? '0' : '1';
     }
 
-    // 1. Scrub Video (Tied perfectly to scroll progress 0..1)
-    if (this.video && this.videoDuration > 0 && !this.inTransition) {
-      // Offset by slightly less than total duration to avoid loop flickers
-      const safeScroll = Math.min(this.scrollProgress, 1.0);
-      const tgtTime = safeScroll * (this.videoDuration - 0.1);
-      this.video.currentTime = tgtTime;
-    }
+    // 1. Scrub Video (Tied to scroll progress, but throttled to avoid seek thrash)
+    this._syncVideoToScroll();
 
     if (!this.inTransition) {
       // 2. Animate Logo emergence (scroll from 0.4 to 0.9)
